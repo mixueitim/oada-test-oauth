@@ -1,17 +1,20 @@
+var utils = {
+	'expand_param' : function(dict){
+		var str = [];
+		for(var key in dict){
+			str.push(key + "=" + encodeURIComponent(dict[key]));
+		}
+		return str.join("&");
+	}
+}
+
 function getEndpoint(type){
 	//for testing purpose
+	// /.well-known/oada-configuration 
 	var Am = {
 		"authorization_endpoint" : "https://provider.oada-dev.com/auth"
 	}
 	return Am[type];
-}
-
-function expand_param(dict){
-	var str = [];
-	for(var key in dict){
-		str.push(key + "=" + encodeURIComponent(dict[key]));
-	}
-	return str.join("&");
 }
 
 function getAccessCode() {
@@ -23,5 +26,11 @@ function getAccessCode() {
     	"redirect_uri": "https://client.oada-dev.com/redirect",
     	"scope": "bookmarks.fields"
     }
-    var url = auth + "/" + "?" + expand_param(param);
+    var url = auth + "/" + "?" + utils.expand_param(param);
+
+    /* call this URL */
+
+    /* get the HTML and we can reconstruct a POST request to /decision */
+
+
 }
