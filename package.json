@@ -10,6 +10,7 @@
   "dependencies": {
     "jsonwebtoken": "^3.2.2",
     "supertest": "^0.15.0"
+    "cheerio": "*"
   },
   "devDependencies": {},
   "repository": {
@@ -19,5 +20,6 @@
   "bugs": {
     "url": "https://github.com/ssabpisa/oada-test-oauth/issues"
   },
-  "homepage": "https://github.com/ssabpisa/oada-test-oauth"
+  "homepage": "https://github.com/ssabpisa/oada-test-oauth",
+  "description": "Automated test for OADA OAuth 2.0 Flow"
 }
