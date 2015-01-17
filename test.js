@@ -1,7 +1,7 @@
 var request = require('superagent');
 var cheerio = require('cheerio');
 var agent = request.agent();
-var domain = "https://provider.oada-dev.com";
+var domain = "https://identity.oada-dev.com";
 var wellknown_doc = null;
 
 var utils = {
@@ -46,10 +46,9 @@ function getEndpoint(type){
 }
 
 function determineURL(current_url, form_action){
-    var base = getEndpoint("oada_base_uri");
     var url = current_url + "/" + form_action;
     if(form_action[0] == "/"){
-    	url = form_action.replace(/^\//, base + "/");
+    	url = form_action.replace(/^\//, domain + "/");
     }
     return url;
 }
@@ -60,11 +59,13 @@ function tryGetToken() {
 }
 
 function tryLogin(){
+	var fullurl = domain + "/login";
+
 	agent
-	.post("https://provider.oada-dev.com/login")
+	.post(fullurl)
     .type('form') 
     .set('User-Agent','Mozilla/5.0 (X11; Linux x86_64; rv:12.0) Gecko/20100101 Firefox/12.0')
-	.send({username: "frank", password: "pass"})
+	.send({username: "andy", password: "pass"})
 	.end(didLogin);
 }
 
