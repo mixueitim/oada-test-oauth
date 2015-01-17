@@ -1,6 +1,9 @@
 var request = require('superagent');
 var cheerio = require('cheerio');
 var agent = request.agent();
+var domain = "https://provider.oada-dev.com";
+var wellknown_doc = null;
+
 var utils = {
 	'joinparam' : function(dict){
 		var str = [];
@@ -24,17 +27,22 @@ var utils = {
 	}
 }
 
-function getEndpoint(type){
-	// /.well-known/oada-configuration 
-	var Am = {
-		"authorization_endpoint": "https://provider.oada-dev.com/auth",
-		"token_endpoint": "https://provider.oada-dev.com/token",
-		"oada_base_uri": "https://provider.oada-dev.com",
-		"client_secret_alg_supported": [
-			"RS256"
-			]
+function init(){
+	var url = domain + "/.well-known/oada-configuration"
+	request.get(url).end(function(e,res){
+		try{
+			wellknown_doc = JSON.parse(res.text);
+		}catch(e){
+			throw ".well-known document cannot be parsed"
 		}
-	return Am[type];
+	});
+}
+
+function getEndpoint(type){
+	if(wellknown_doc === null) {
+		throw "Try doing init()"
+	}
+	return wellknown_doc[type];
 }
 
 function determineURL(current_url, form_action){
@@ -48,15 +56,16 @@ function determineURL(current_url, form_action){
 
 
 function tryGetToken() {
-    var base = getEndpoint("oada_base_uri");
+    tryLogin();
+}
 
-    agent
+function tryLogin(){
+	agent
 	.post("https://provider.oada-dev.com/login")
     .type('form') 
     .set('User-Agent','Mozilla/5.0 (X11; Linux x86_64; rv:12.0) Gecko/20100101 Firefox/12.0')
 	.send({username: "frank", password: "pass"})
 	.end(didLogin);
-
 }
 
 function getAccessCode(){
@@ -128,5 +137,6 @@ function didLogin(err,res){
 	getAccessCode();
 }
 
+init();
 tryGetToken();
 
