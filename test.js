@@ -1,5 +1,7 @@
 var request = require('superagent');
 var cheerio = require('cheerio');
+var clisec = require('client_secret');
+
 var agent = request.agent();
 var domain = "https://identity.oada-dev.com";
 var wellknown_doc = null;
@@ -54,7 +56,7 @@ function determineURL(current_url, form_action){
 }
 
 
-function tryGetToken() {
+function beginObtainTokenProcess() {
     tryLogin();
 }
 
@@ -138,6 +140,61 @@ function didLogin(err,res){
 	getAccessCode();
 }
 
-init();
-tryGetToken();
+/**
+*  in order to exchange code for token, 
+*  we need to make request to token endpoint with 
+*  signed client_secret, grant_type, code, redirect_uri, client_id 
+*/
+function getToken(){
+	//client secret must validate against "public key from client registration document" (?)
 
+    //Generate Client Secret (which only should be known by provider and client)
+
+    //JWS
+    //typ = Type
+    //alg = Algorithm
+    //kid = Key Id (?)
+    var cs_header = {
+	  "typ": "JWT",
+	  "alg": "RS256",
+	  "kid": "nc63dhaSdd82w32udx6v"
+	}
+
+	//TODO: How to obtain `kid`
+
+
+	//JWT
+	//ac = Access code
+	//iat = Issued At
+	//aud = Audience
+	//iss = issuer
+	var cs_payload = {
+	  "ac": "Pi2dY-FBxZqLx81lTbDM4WGlI",
+	  "iat": 1418421102,
+	  "aud": "https://provider.oada-dev.com/token",
+	  "iss": "3klaxu838akahf38acucaix73@identity.oada-dev.com"
+	}
+
+	//JWK ?
+	//TODO: not sure about this part
+	//kty = Key Type
+	//use = Public Key Use
+	//alg = Algorithm
+	//kid = Key Id (base64)
+	//n = Modulus (base64)   - ---? 
+	//e = Public Exponent (base64) ---- ?
+	var pubkey = {
+	  "kty": "RSA",
+	  "use": "sig",
+	  "alg": "RS256",
+	  "kid": "nc63dhaSdd82w32udx6v",
+	  "n": "AKj8uuRIHMaq-EJVf2d1QoB1DSvFvYQ3Xa1gvVxaXgxDiF9-Dh7bO5f0VotrYD05MqvY9X_zxF_ioceCh3_rwjNFVRxNnnIfGx8ooOO-1f4SZkHE-mbhFOe0WFXJqt5PPSL5ZRYbmZKGUrQWvRRy_KwBHZDzD51b0-rCjlqiFh6N",
+	  "e": "AQAB"
+	}
+
+	// var hash_header = 
+
+}
+
+init();
+beginObtainTokenProcess();
