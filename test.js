@@ -1,10 +1,15 @@
 var request = require('superagent');
 var cheerio = require('cheerio');
-var clisec = require('client_secret');
-
+var jwt = require('jsonwebtoken');
+var fs = require('fs');
 var agent = request.agent();
-var domain = "https://identity.oada-dev.com";
+
 var wellknown_doc = null;
+
+var IDENTITY_PROVIDER = "https://identity.oada-dev.com";
+var CLIENT_ID = "3klaxu838akahf38acucaix73@identity.oada-dev.com";
+var CLIENT_ACCEPT_URI = "https://client.oada-dev.com/redirect";
+var DISCOVERY_URI = "https://identity.oada-dev.com/clientDiscovery?clientId=" + CLIENT_ID;
 
 var utils = {
 	'joinparam' : function(dict){
@@ -30,7 +35,7 @@ var utils = {
 }
 
 function init(){
-	var url = domain + "/.well-known/oada-configuration"
+	var url = IDENTITY_PROVIDER + "/.well-known/oada-configuration"
 	request.get(url).end(function(e,res){
 		try{
 			wellknown_doc = JSON.parse(res.text);
@@ -50,7 +55,7 @@ function getEndpoint(type){
 function determineURL(current_url, form_action){
     var url = current_url + "/" + form_action;
     if(form_action[0] == "/"){
-    	url = form_action.replace(/^\//, domain + "/");
+    	url = form_action.replace(/^\//, IDENTITY_PROVIDER + "/");
     }
     return url;
 }
@@ -61,7 +66,7 @@ function beginObtainTokenProcess() {
 }
 
 function tryLogin(){
-	var fullurl = domain + "/login";
+	var fullurl = IDENTITY_PROVIDER + "/login";
 
 	agent
 	.post(fullurl)
@@ -75,9 +80,9 @@ function getAccessCode(){
 	var auth_base = getEndpoint("authorization_endpoint");
     var param = {
     	"response_type" : "code",
-    	"client_id": "3klaxu838akahf38acucaix73@identity.oada-dev.com",
+    	"client_id": CLIENT_ID,
     	"state" : "xyz",
-    	"redirect_uri": "https://client.oada-dev.com/redirect",
+    	"redirect_uri": CLIENT_ACCEPT_URI,
     	"scope": "bookmarks.fields"
     }
     var auth_url = auth_base + "/" + "?" + utils.joinparam(param);
@@ -91,9 +96,6 @@ function getAccessCode(){
    	.end(didGetGrantScreen);
 }
 
-function getTokenWithCode(code){
-
-}
 
 
 function didGetGrantScreen(err, res){
@@ -140,60 +142,43 @@ function didLogin(err,res){
 	getAccessCode();
 }
 
+function generateCientSecret(key, issuer, audience, accessCode){
+	var sec = {
+		ac : accessCode
+	}
+
+	var options = {
+		algorithm: 'RS256',
+		audience: audience,
+		issuer: issuer
+	}
+
+	return jwt.sign(sec, key, options);
+}
+
 /**
-*  in order to exchange code for token, 
-*  we need to make request to token endpoint with 
-*  signed client_secret, grant_type, code, redirect_uri, client_id 
+*  exchange code for token, 
+*  - make request to token endpoint 
 */
-function getToken(){
-	//client secret must validate against "public key from client registration document" (?)
+function getTokenWithCode(ac){
+	var token_endpoint = wellknown_doc["token_endpoint"];
+	var cert = fs.readFileSync('certs/private.pem');
 
-    //Generate Client Secret (which only should be known by provider and client)
-
-    //JWS
-    //typ = Type
-    //alg = Algorithm
-    //kid = Key Id (?)
-    var cs_header = {
-	  "typ": "JWT",
-	  "alg": "RS256",
-	  "kid": "nc63dhaSdd82w32udx6v"
+	var secret = generateCientSecret(
+			cert,
+			CLIENT_ID,
+			token_endpoint,
+			ac
+		);
+	var post_param = {
+		"grant_type": "authorization_code",
+		"code": ac,
+		"redirect_uri": CLIENT_ACCEPT_URI,
+		"client_id": CLIENT_ID,
+		"client_secret": secret
 	}
 
-	//TODO: How to obtain `kid`
-
-
-	//JWT
-	//ac = Access code
-	//iat = Issued At
-	//aud = Audience
-	//iss = issuer
-	var cs_payload = {
-	  "ac": "Pi2dY-FBxZqLx81lTbDM4WGlI",
-	  "iat": 1418421102,
-	  "aud": "https://provider.oada-dev.com/token",
-	  "iss": "3klaxu838akahf38acucaix73@identity.oada-dev.com"
-	}
-
-	//JWK ?
-	//TODO: not sure about this part
-	//kty = Key Type
-	//use = Public Key Use
-	//alg = Algorithm
-	//kid = Key Id (base64)
-	//n = Modulus (base64)   - ---? 
-	//e = Public Exponent (base64) ---- ?
-	var pubkey = {
-	  "kty": "RSA",
-	  "use": "sig",
-	  "alg": "RS256",
-	  "kid": "nc63dhaSdd82w32udx6v",
-	  "n": "AKj8uuRIHMaq-EJVf2d1QoB1DSvFvYQ3Xa1gvVxaXgxDiF9-Dh7bO5f0VotrYD05MqvY9X_zxF_ioceCh3_rwjNFVRxNnnIfGx8ooOO-1f4SZkHE-mbhFOe0WFXJqt5PPSL5ZRYbmZKGUrQWvRRy_KwBHZDzD51b0-rCjlqiFh6N",
-	  "e": "AQAB"
-	}
-
-	// var hash_header = 
-
+	console.log(post_param);
 }
 
 init();
