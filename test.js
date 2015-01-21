@@ -5,8 +5,10 @@ var fs = require('fs');
 var agent = request.agent();
 
 var wellknown_doc = null;
+var wellknown_prov = null;
 
 var IDENTITY_PROVIDER = "https://identity.oada-dev.com";
+var OADA_PROVIDER = "https://provider.oada-dev.com";
 var CLIENT_ID = "3klaxu838akahf38acucaix73@identity.oada-dev.com";
 var CLIENT_ACCEPT_URI = "https://client.oada-dev.com/redirect";
 var DISCOVERY_URI = "https://identity.oada-dev.com/clientDiscovery?clientId=" + CLIENT_ID;
@@ -34,22 +36,26 @@ var utils = {
 	}
 }
 
-function init(){
+function init(cb){
 	var url = IDENTITY_PROVIDER + "/.well-known/oada-configuration"
 	request.get(url).end(function(e,res){
 		try{
 			wellknown_doc = JSON.parse(res.text);
+			var url2 = OADA_PROVIDER + "/.well-known/oada-configuration"
+			request.get(url2).end(function(e,res){
+				try{
+					wellknown_prov = JSON.parse(res.text);
+					cb();
+				}catch(e){
+					throw ".well-known document cannot be parsed"
+				}
+			});
+
 		}catch(e){
 			throw ".well-known document cannot be parsed"
 		}
 	});
-}
-
-function getEndpoint(type){
-	if(wellknown_doc === null) {
-		throw "Try doing init()"
-	}
-	return wellknown_doc[type];
+	
 }
 
 function determineURL(current_url, form_action){
@@ -77,7 +83,7 @@ function tryLogin(){
 }
 
 function getAccessCode(){
-	var auth_base = getEndpoint("authorization_endpoint");
+	var auth_base = wellknown_doc["authorization_endpoint"];
     var param = {
     	"response_type" : "code",
     	"client_id": CLIENT_ID,
@@ -142,7 +148,7 @@ function didLogin(err,res){
 	getAccessCode();
 }
 
-function generateCientSecret(key, issuer, audience, accessCode){
+function generateClientSecret(key, issuer, audience, accessCode){
 	var sec = {
 		ac : accessCode
 	}
@@ -161,15 +167,18 @@ function generateCientSecret(key, issuer, audience, accessCode){
 *  - make request to token endpoint 
 */
 function getTokenWithCode(ac){
-	var token_endpoint = wellknown_doc["token_endpoint"];
+	var token_endpoint = wellknown_prov["token_endpoint"];
 	var cert = fs.readFileSync('certs/private.pem');
 
-	var secret = generateCientSecret(
+	// console.log(token_endpoint);
+
+	var secret = generateClientSecret(
 			cert,
 			CLIENT_ID,
 			token_endpoint,
 			ac
 		);
+
 	var post_param = {
 		"grant_type": "authorization_code",
 		"code": ac,
@@ -179,7 +188,20 @@ function getTokenWithCode(ac){
 	}
 
 	console.log(post_param);
+
+	agent
+	.post(token_endpoint)
+    .type('form') 
+     .set('User-Agent','Mozilla/5.0 (X11; Linux x86_64; rv:12.0) Gecko/20100101 Firefox/12.0')
+ 	.send(post_param)
+	.end(didGetToken);
 }
 
-init();
-beginObtainTokenProcess();
+function didGetToken(err,res){
+	if(err){
+		throw err;
+	}
+	console.log(res.text);
+}
+
+init(beginObtainTokenProcess);
