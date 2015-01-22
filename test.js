@@ -3,6 +3,7 @@ var cheerio = require('cheerio');
 var jwt = require('jsonwebtoken');
 var fs = require('fs');
 var agent = request.agent();
+var jws = require('jws-jwk').shim();
 
 var wellknown_doc = null;
 var wellknown_prov = null;
@@ -152,12 +153,16 @@ function generateClientSecret(key, issuer, audience, accessCode){
 	var sec = {
 		ac : accessCode
 	}
-
+	var kid = "nc63dhaSdd82w32udx6v";
 	var options = {
 		algorithm: 'RS256',
 		audience: audience,
-		issuer: issuer
+		issuer: issuer,
+		headers: {
+			'kid': kid
+		}
 	}
+
 
 	return jwt.sign(sec, key, options);
 }
@@ -167,7 +172,7 @@ function generateClientSecret(key, issuer, audience, accessCode){
 *  - make request to token endpoint 
 */
 function getTokenWithCode(ac){
-	var token_endpoint = wellknown_prov["token_endpoint"];
+	var token_endpoint = wellknown_doc["token_endpoint"];
 	var cert = fs.readFileSync('certs/private.pem');
 
 	// console.log(token_endpoint);
