@@ -6,16 +6,15 @@ var agent = request.agent();
 var jws = require('jws-jwk').shim();
 
 var wellknown_doc = null;
-var wellknown_prov = null;
+var discovery_doc = null;
 
 var IDENTITY_PROVIDER = "https://identity.oada-dev.com";
 var OADA_PROVIDER = "https://provider.oada-dev.com";
 
 var CLIENT_ID = "3klaxu838akahf38acucaix73@identity.oada-dev.com";
 var CLIENT_KEY_ID = "nc63dhaSdd82w32udx6v";
-var CLIENT_ACCEPT_URI = "https://client.oada-dev.com/redirect";
+var CLIENT_REDIR_URL = "https://client.oada-dev.com/redirect";
 
-var DISCOVERY_URL = "https://identity.oada-dev.com/clientDiscovery?clientId=" + CLIENT_ID;
 
 var utils = {
 	'joinparam' : function(dict){
@@ -41,21 +40,25 @@ var utils = {
 }
 
 function init(cb){
-	var url = IDENTITY_PROVIDER + "/.well-known/oada-configuration"
-	request.get(url).end(function(e,res){
+	var wellurl = IDENTITY_PROVIDER + "/.well-known/oada-configuration"
+	var clientdisurl = IDENTITY_PROVIDER + "/clientDiscovery?clientId=" + CLIENT_ID
+
+	request.get(wellurl).end(function(e,res){
 		try{
 			wellknown_doc = JSON.parse(res.text);
-			var url2 = OADA_PROVIDER + "/.well-known/oada-configuration"
-			request.get(url2).end(function(e,res){
+			request.get(clientdisurl).end(function(e,res){
 				try{
-					wellknown_prov = JSON.parse(res.text);
+					discovery_doc = JSON.parse(res.text);
+					CLIENT_REDIR_URL = discovery_doc["redirectUrls"][0];
 					cb();
 				}catch(e){
-					throw ".well-known document cannot be parsed"
+					console.error(res.text)
+					throw "clientDiscovery document cannot be parsed"
 				}
-			});
-
+				
+			})
 		}catch(e){
+			console.error(res.text)
 			throw ".well-known document cannot be parsed"
 		}
 	});
@@ -92,7 +95,7 @@ function getAccessCode(){
     	"response_type" : "code",
     	"client_id": CLIENT_ID,
     	"state" : "xyz",
-    	"redirect_uri": CLIENT_ACCEPT_URI,
+    	"redirect_uri": CLIENT_REDIR_URL,
     	"scope": "bookmarks.fields"
     }
     var auth_url = auth_base + "/" + "?" + utils.joinparam(param);
@@ -189,7 +192,7 @@ function getTokenWithCode(ac){
 	var post_param = {
 		"grant_type": "authorization_code",
 		"code": ac,
-		"redirect_uri": CLIENT_ACCEPT_URI,
+		"redirect_uri": CLIENT_REDIR_URL,
 		"client_id": CLIENT_ID,
 		"client_secret": secret
 	}
@@ -210,5 +213,6 @@ function didGetToken(err,res){
 	}
 	console.log(res.text);
 }
+
 
 init(beginObtainTokenProcess);
