@@ -10,9 +10,12 @@ var wellknown_prov = null;
 
 var IDENTITY_PROVIDER = "https://identity.oada-dev.com";
 var OADA_PROVIDER = "https://provider.oada-dev.com";
+
 var CLIENT_ID = "3klaxu838akahf38acucaix73@identity.oada-dev.com";
+var CLIENT_KEY_ID = "nc63dhaSdd82w32udx6v";
 var CLIENT_ACCEPT_URI = "https://client.oada-dev.com/redirect";
-var DISCOVERY_URI = "https://identity.oada-dev.com/clientDiscovery?clientId=" + CLIENT_ID;
+
+var DISCOVERY_URL = "https://identity.oada-dev.com/clientDiscovery?clientId=" + CLIENT_ID;
 
 var utils = {
 	'joinparam' : function(dict){
@@ -153,13 +156,12 @@ function generateClientSecret(key, issuer, audience, accessCode){
 	var sec = {
 		ac : accessCode
 	}
-	var kid = "nc63dhaSdd82w32udx6v";
 	var options = {
 		algorithm: 'RS256',
 		audience: audience,
 		issuer: issuer,
 		headers: {
-			'kid': kid
+			'kid': CLIENT_KEY_ID
 		}
 	}
 
@@ -173,7 +175,7 @@ function generateClientSecret(key, issuer, audience, accessCode){
 */
 function getTokenWithCode(ac){
 	var token_endpoint = wellknown_doc["token_endpoint"];
-	var cert = fs.readFileSync('certs/private.pem');
+	var cert = fs.readFileSync('certs/balmos.pem');
 
 	// console.log(token_endpoint);
 
