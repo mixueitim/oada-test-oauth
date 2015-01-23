@@ -79,7 +79,7 @@ function beginObtainTokenProcess() {
 }
 
 function tryLogin(){
-	var fullurl = IDENTITY_PROVIDER + "/login";
+	var fullurl = IDENTITY_PROVIDER + "/login"; //not standard!
 
 	agent
 	.post(fullurl)
