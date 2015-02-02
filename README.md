@@ -1,2 +1,1 @@
-# OADA OAuth Test
-Automated test for OADA OAuth 2.0 Flow
+See https://github.com/OADA/oada-compliance
